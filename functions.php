@@ -8,13 +8,15 @@ function getLivresDisponibles() {
 
 function rechercherLivre($titre) {
     global $pdo;
-
-    $stmt = $pdo->prepare("SELECT * FROM livres WHERE titre LIKE :titre");
-    $searchTerm = "%".$titre."%";
-    $stmt->bindParam(':titre', $searchTerm);
-    $stmt->execute();
-    
-    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    try {
+        $stmt = $pdo->prepare("SELECT * FROM livres WHERE titre LIKE :titre");
+        $searchTerm = "%".$titre."%";
+        $stmt->execute(['titre' => $searchTerm]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch(PDOException $e) {
+        echo "Erreur : " . $e->getMessage();
+        return [];
+    }
 }
 
 function emprunterLivre($livre_id, $date_emprunt, $date_retour) {
