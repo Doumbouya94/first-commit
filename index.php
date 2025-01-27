@@ -52,5 +52,21 @@ $livres = getLivresDisponibles();
         <input type="text" name="recherche" placeholder="Rechercher un livre...">
         <button type="submit">Rechercher</button>
     </form>
+    
+    <!-- Affichage des résultats -->
+    <?php if (isset($resultats) && !empty($resultats)): ?>
+    <div class="resultats">
+        <?php foreach($resultats as $livre): ?>
+            <div class="livre">
+                <h3><?= $livre['titre'] ?? 'Titre non disponible' ?></h3>
+                <p>Auteur : <?= $livre['auteur'] ?? 'Auteur non disponible' ?></p>
+                <p>Statut : <?= $livre['status'] ?? 'Statut non disponible' ?></p>
+            </div>
+        <?php endforeach; ?>
+    </div>
+<?php elseif (isset($resultats)): ?>
+    <p>Aucun livre trouvé.</p>
+<?php endif; ?>
+    
 </body>
 </html>
