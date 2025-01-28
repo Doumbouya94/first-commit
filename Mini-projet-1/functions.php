@@ -3,7 +3,23 @@ require_once 'config.php';
 
 function getLivresDisponibles() {
     global $pdo;
-    return $pdo->query("SELECT * FROM livres WHERE status = 'DISPONIBLE'");
+    try {
+        $stmt = $pdo->query("SELECT id, titre, auteur FROM livres WHERE status = 'DISPONIBLE'");
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch(PDOException $e) {
+        return [];
+    }
+}
+
+function verifierCarte($carte_id) {
+    global $pdo;
+    try {
+        $stmt = $pdo->prepare("SELECT status FROM cartes WHERE id = ? AND status = 'ACTIVE'");
+        $stmt->execute([$carte_id]);
+        return $stmt->fetch() !== false;
+    } catch(PDOException $e) {
+        return false;
+    }
 }
 
 function rechercherLivre($titre) {
@@ -19,23 +35,27 @@ function rechercherLivre($titre) {
     }
 }
 
-function emprunterLivre($livre_id, $date_emprunt, $date_retour) {
+function emprunterLivre($livre_id, $carte_id, $date_emprunt, $date_retour) {
     global $pdo;
     try {
-        $pdo->beginTransaction();
-        
-        // Marquer le livre comme non disponible
-        $stmt = $pdo->prepare("UPDATE livres SET disponible = 0 WHERE id = ?");
+        // Vérifier si le livre est disponible
+        $stmt = $pdo->prepare("SELECT status FROM livres WHERE id = ?");
         $stmt->execute([$livre_id]);
+        $livre = $stmt->fetch();
         
-        // Créer l'emprunt
-        $stmt = $pdo->prepare("INSERT INTO emprunts (livre_id, date_emprunt, date_retour_prevue) VALUES (?, ?, ?)");
-        $stmt->execute([$livre_id, $date_emprunt, $date_retour]);
-        
-        $pdo->commit();
-        return true;
-    } catch (Exception $e) {
-        $pdo->rollBack();
+        if ($livre && $livre['status'] == 'DISPONIBLE') {
+            // Créer l'emprunt
+            $stmt = $pdo->prepare("INSERT INTO emprunts (livre_id, carte_id, date_emprunt, date_retour_prevue) VALUES (?, ?, ?, ?)");
+            $stmt->execute([$livre_id, $carte_id, $date_emprunt, $date_retour]);
+            
+            // Mettre à jour le statut du livre
+            $stmt = $pdo->prepare("UPDATE livres SET status = 'EMPRUNTE' WHERE id = ?");
+            $stmt->execute([$livre_id]);
+            
+            return true;
+        }
+        return false;
+    } catch(PDOException $e) {
         return false;
     }
 }
@@ -51,3 +71,4 @@ function calculerFraisRetard($emprunt_id) {
     }
     return 0;
 }
+
